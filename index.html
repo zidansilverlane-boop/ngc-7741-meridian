@@ -1,0 +1,1571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="NGC 7741 Meridian — a quiet particle spiral observed through a fictional meridian instrument.">
+<title>NGC 7741 Meridian · Observatory</title>
+<style>
+  :root{
+    --bg:#000000;
+    --ink:#e8edf4;
+    --muted:#6d7787;
+    --amber:#ffd9a0;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --mono:ui-monospace,"SFMono-Regular","SF Mono",Menlo,Consolas,monospace;
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html,body{width:100%;height:100%;margin:0;background:var(--bg);overflow:hidden;}
+  body{
+    color:var(--ink);
+    font-family:var(--serif);
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+    overscroll-behavior:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  ::selection{background:rgba(255,217,160,.22);color:#fff;}
+
+  #stage{
+    position:fixed;
+    inset:0;
+    display:block;
+    width:100%;
+    height:100%;
+    background:var(--bg);
+    touch-action:none;
+    cursor:grab;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  #stage.is-dragging{cursor:grabbing;}
+  #stage:focus-visible{
+    outline:1px solid rgba(255,217,160,.34);
+    outline-offset:-8px;
+  }
+
+  .vignette{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+    background:
+      radial-gradient(ellipse 78% 82% at 51% 49%,
+        rgba(0,0,0,0) 34%,
+        rgba(0,0,0,.08) 55%,
+        rgba(0,0,0,.52) 84%,
+        rgba(0,0,0,.92) 100%),
+      linear-gradient(to bottom,
+        rgba(0,0,0,.30) 0%,
+        rgba(0,0,0,0) 17%,
+        rgba(0,0,0,0) 78%,
+        rgba(0,0,0,.30) 100%);
+  }
+
+  .hud{
+    position:fixed;
+    inset:0;
+    z-index:2;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 2.4s cubic-bezier(.16,1,.3,1);
+  }
+  body.is-ready .hud{opacity:1;}
+
+  /* ---- masthead ------------------------------------------------ */
+  .masthead{
+    position:absolute;
+    top:max(clamp(24px,4.4vh,54px), calc(env(safe-area-inset-top) + 12px));
+    left:max(clamp(22px,4.4vw,64px), calc(env(safe-area-inset-left) + 12px));
+    max-width:min(620px,56vw);
+  }
+  .designation{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin:0;
+    font-family:var(--mono);
+    font-size:9px;
+    font-weight:500;
+    line-height:1.4;
+    letter-spacing:.32em;
+    text-transform:uppercase;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .designation .rule{
+    flex:0 0 auto;
+    width:28px;
+    height:1px;
+    background:linear-gradient(90deg,rgba(255,217,160,.62),rgba(255,217,160,.06));
+  }
+  h1{
+    margin:.34em 0 0;
+    font-family:var(--serif);
+    font-size:clamp(41px,4.9vw,71px);
+    font-weight:400;
+    line-height:.98;
+    letter-spacing:-.035em;
+    color:#edf0f5;
+    text-wrap:balance;
+  }
+  h1 em{
+    font-style:italic;
+    font-weight:400;
+    color:var(--amber);
+    text-shadow:
+      0 0 26px rgba(255,193,118,.28),
+      0 0 68px rgba(255,158,74,.12);
+  }
+  .classification{
+    max-width:408px;
+    margin:1.15em 0 0;
+    font-size:clamp(13px,1.06vw,15px);
+    font-style:italic;
+    line-height:1.76;
+    letter-spacing:.012em;
+    color:rgba(198,209,224,.63);
+    text-shadow:0 1px 22px rgba(0,0,0,.9);
+  }
+  .classification .type{
+    font-family:var(--mono);
+    font-size:.66em;
+    font-style:normal;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:rgba(255,217,160,.76);
+    white-space:nowrap;
+  }
+
+  /* ---- telemetry ------------------------------------------------ */
+  .stats{
+    position:absolute;
+    left:max(clamp(22px,4.4vw,64px), calc(env(safe-area-inset-left) + 12px));
+    bottom:max(clamp(22px,4.2vh,46px), calc(env(safe-area-inset-bottom) + 12px));
+    display:flex;
+    align-items:flex-end;
+    font-family:var(--mono);
+  }
+  .stat{
+    padding:0 clamp(10px,1.65vw,25px);
+  }
+  .stat:first-child{padding-left:0;}
+  .stat + .stat{border-left:1px solid rgba(173,190,212,.14);}
+  .stat-label{
+    display:block;
+    margin-bottom:9px;
+    font-size:8px;
+    font-weight:500;
+    line-height:1;
+    letter-spacing:.235em;
+    text-transform:uppercase;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .stat-value{
+    display:block;
+    min-width:6.2ch;
+    font-size:clamp(14px,1.28vw,19px);
+    font-weight:400;
+    line-height:1;
+    letter-spacing:.015em;
+    color:#dce3ee;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+  .stat-unit{
+    margin-left:.34em;
+    font-size:.62em;
+    letter-spacing:.08em;
+    color:var(--muted);
+  }
+
+  /* ---- compass -------------------------------------------------- */
+  .compass{
+    position:absolute;
+    top:max(clamp(24px,4.2vh,50px), calc(env(safe-area-inset-top) + 10px));
+    right:max(clamp(22px,4.4vw,60px), calc(env(safe-area-inset-right) + 12px));
+    width:92px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:7px;
+  }
+  .compass svg{
+    display:block;
+    width:82px;
+    height:82px;
+    overflow:visible;
+    filter:drop-shadow(0 0 16px rgba(0,0,0,.8));
+  }
+  .compass-label{
+    font-family:var(--mono);
+    font-size:7.5px;
+    font-weight:500;
+    line-height:1;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .compass-heading{
+    color:rgba(255,217,160,.62);
+    letter-spacing:.13em;
+    margin-left:.5em;
+  }
+  #compassNeedle{
+    transform-box:fill-box;
+    transform-origin:center;
+    will-change:transform;
+  }
+
+  /* ---- controls ------------------------------------------------- */
+  .controls{
+    position:absolute;
+    top:50%;
+    right:max(clamp(18px,3.15vw,46px), calc(env(safe-area-inset-right) + 10px));
+    z-index:3;
+    display:flex;
+    flex-direction:column;
+    gap:13px;
+    transform:translateY(-50%);
+    pointer-events:none;
+  }
+  .controls .control{pointer-events:auto;}
+  .control{
+    position:relative;
+    width:46px;
+    height:46px;
+    padding:0;
+    display:grid;
+    place-items:center;
+    border-radius:50%;
+    border:1px solid rgba(190,204,224,.18);
+    background:rgba(9,11,16,.40);
+    -webkit-backdrop-filter:blur(13px) saturate(120%);
+    backdrop-filter:blur(13px) saturate(120%);
+    color:rgba(224,231,241,.78);
+    cursor:pointer;
+    outline:none;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.05),
+      0 8px 30px rgba(0,0,0,.28);
+    transition:
+      transform .34s cubic-bezier(.2,.8,.2,1),
+      border-color .34s ease,
+      box-shadow .34s ease,
+      color .34s ease,
+      background-color .34s ease;
+  }
+  .control::after{content:"";position:absolute;inset:-5px;border-radius:50%;}
+  .control svg{
+    width:18px;
+    height:18px;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.35;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    pointer-events:none;
+  }
+  .control:hover,
+  .control:focus-visible{
+    transform:scale(1.12);
+    color:var(--amber);
+    border-color:rgba(255,217,160,.82);
+    background-color:rgba(28,22,15,.46);
+    box-shadow:
+      0 0 0 1px rgba(255,217,160,.12),
+      0 0 26px rgba(255,181,102,.23),
+      inset 0 0 18px rgba(255,206,141,.05);
+  }
+  .control:active{transform:scale(1.03);}
+  .control:focus-visible{box-shadow:0 0 0 2px rgba(255,217,160,.72),0 0 30px rgba(255,181,102,.25);}
+  .control.is-paused{
+    color:rgba(255,217,160,.82);
+    border-color:rgba(255,217,160,.36);
+  }
+  .control .icon-play{display:none;}
+  .control.is-paused .icon-pause{display:none;}
+  .control.is-paused .icon-play{display:block;}
+
+  /* ---- small field note ---------------------------------------- */
+  .field-note{
+    position:absolute;
+    right:max(clamp(22px,4.4vw,60px), calc(env(safe-area-inset-right) + 12px));
+    bottom:max(clamp(22px,4.2vh,46px), calc(env(safe-area-inset-bottom) + 12px));
+    text-align:right;
+    font-family:var(--mono);
+    font-size:8px;
+    font-weight:400;
+    line-height:1.85;
+    letter-spacing:.19em;
+    text-transform:uppercase;
+    color:rgba(150,160,176,.82);
+  }
+  .field-note span{display:block;}
+  .field-note .quiet{color:rgba(255,205,150,.70);}
+
+  .sr-only{
+    position:absolute!important;
+    width:1px!important;
+    height:1px!important;
+    padding:0!important;
+    margin:-1px!important;
+    overflow:hidden!important;
+    clip:rect(0,0,0,0)!important;
+    white-space:nowrap!important;
+    border:0!important;
+  }
+
+  @media (max-width:820px){
+    .masthead{
+      left:max(20px, calc(env(safe-area-inset-left) + 12px));
+      top:max(22px, calc(env(safe-area-inset-top) + 10px));
+      max-width:calc(100vw - 106px);
+    }
+    h1{font-size:clamp(32px,9.6vw,45px);margin-top:.32em;letter-spacing:-.028em;}
+    .designation{font-size:7.5px;gap:10px;letter-spacing:.25em;white-space:normal;}
+    .designation .rule{width:20px;}
+    .classification{max-width:calc(100vw - 44px);font-size:12px;line-height:1.68;margin-top:1.05em;}
+    .stats{
+      left:max(18px, calc(env(safe-area-inset-left) + 12px));
+      right:max(16px, calc(env(safe-area-inset-right) + 12px));
+      bottom:max(16px, calc(env(safe-area-inset-bottom) + 10px));
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+    }
+    .stat{padding:0 6px;min-width:0;}
+    .stat + .stat{border-left:1px solid rgba(173,190,212,.12);}
+    .stat-label{font-size:6.5px;letter-spacing:.15em;margin-bottom:7px;overflow:hidden;text-overflow:ellipsis;}
+    .stat-value{font-size:12px;min-width:0;}
+    .compass{
+      top:max(18px, calc(env(safe-area-inset-top) + 8px));
+      right:max(14px, calc(env(safe-area-inset-right) + 10px));
+      width:57px;
+      gap:5px;
+    }
+    .compass svg{width:52px;height:52px;}
+    .compass-label{font-size:6px;letter-spacing:.17em;}
+    .controls{
+      right:max(12px, calc(env(safe-area-inset-right) + 8px));
+      gap:10px;
+    }
+    .control{width:40px;height:40px;}
+    .control svg{width:16px;height:16px;}
+    .field-note{display:none;}
+  }
+
+  @media (max-width:420px){
+    .masthead{max-width:calc(100vw - 98px);}
+    h1{font-size:clamp(30px,9.2vw,38px);}
+    .classification{font-size:11px;}
+    .stat{padding:0 4px;}
+    .stat-label{font-size:7px;letter-spacing:.08em;}
+    .stat-value{font-size:11px;}
+  }
+
+  @media (max-width:360px){
+    .masthead{max-width:calc(100vw - 94px);}
+    .designation{font-size:6px;letter-spacing:.18em;gap:8px;}
+    .designation .rule{width:14px;}
+    .classification{font-size:10px;line-height:1.62;}
+  }
+
+  @media (max-height:560px){
+    .masthead{top:18px;}
+    .classification{display:none;}
+    .stats{bottom:max(16px, calc(env(safe-area-inset-bottom) + 10px));}
+    .compass{top:16px;}
+    .field-note{display:none;}
+    .controls{top:max(62%, 210px);gap:10px;}
+    .control{width:40px;height:40px;}
+    .control svg{width:16px;height:16px;}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .control{transition-duration:.01s;}
+  }
+</style>
+</head>
+<body>
+<canvas id="stage" tabindex="0" role="img" aria-label="A particle portrait of the spiral galaxy NGC 7741 Meridian, suspended in a black deep field." aria-describedby="stageInstructions"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+
+<div class="hud" id="hud">
+  <header class="masthead">
+    <p class="designation"><span class="rule" aria-hidden="true"></span>Meridian Observatory&nbsp;&nbsp;·&nbsp;&nbsp;Deep Field 041</p>
+    <h1>NGC 7741 <em>Meridian</em></h1>
+    <p class="classification"><span class="type">Class SB(rs)cd</span> — a quiet barred spiral in the northern deep field. Its arms turn without urgency, carrying the slow arithmetic of light into the dark.</p>
+  </header>
+
+  <section class="stats" aria-label="Instrument telemetry">
+    <div class="stat">
+      <span class="stat-label">Particles</span>
+      <span class="stat-value" id="statParticles">0</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Distance</span>
+      <span class="stat-value"><span id="statDistance">0.0</span><span class="stat-unit">Mly</span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Diameter</span>
+      <span class="stat-value"><span id="statDiameter">0.0</span><span class="stat-unit">kly</span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Tilt</span>
+      <span class="stat-value"><span id="statTilt">0.0</span><span class="stat-unit">°</span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Zoom</span>
+      <span class="stat-value"><span id="statZoom">0.00</span><span class="stat-unit">×</span></span>
+    </div>
+  </section>
+
+  <aside class="compass" aria-label="Orientation compass">
+    <svg viewBox="0 0 84 84" aria-hidden="true">
+      <circle cx="42" cy="42" r="30" fill="none" stroke="rgba(190,204,224,.16)" stroke-width=".7"/>
+      <circle cx="42" cy="42" r="23.5" fill="none" stroke="rgba(190,204,224,.08)" stroke-width=".6" stroke-dasharray="1 4.7"/>
+      <g id="compassTicks"></g>
+      <g id="compassNeedle">
+        <path d="M42 17.5 L46.3 42 L42 66.5 L37.7 42 Z" fill="rgba(226,234,246,.10)" stroke="rgba(226,234,246,.16)" stroke-width=".55"/>
+        <path d="M42 17.5 L46.3 42 L37.7 42 Z" fill="#FFD9A0"/>
+        <circle cx="42" cy="42" r="1.7" fill="#FFD9A0"/>
+      </g>
+      <text x="42" y="7.5" fill="#6D7787" font-family="ui-monospace,Menlo,monospace" font-size="6.2" text-anchor="middle" letter-spacing="1">N</text>
+      <text x="79.5" y="45" fill="#6D7787" font-family="ui-monospace,Menlo,monospace" font-size="6.2" text-anchor="middle" letter-spacing="1">E</text>
+      <text x="42" y="81.5" fill="#6D7787" font-family="ui-monospace,Menlo,monospace" font-size="6.2" text-anchor="middle" letter-spacing="1">S</text>
+      <text x="4.5" y="45" fill="#6D7787" font-family="ui-monospace,Menlo,monospace" font-size="6.2" text-anchor="middle" letter-spacing="1">W</text>
+    </svg>
+    <span class="compass-label">Orientation<span class="compass-heading" id="compassHeading">033°</span></span>
+  </aside>
+
+  <nav class="controls" aria-label="Instrument controls">
+    <button class="control" id="zoomIn" type="button" aria-label="Zoom in" title="Zoom in">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.1"/><path d="M15.1 15.1 20 20M10.5 7.8v5.4M7.8 10.5h5.4"/></svg>
+    </button>
+    <button class="control" id="zoomOut" type="button" aria-label="Zoom out" title="Zoom out">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.1"/><path d="M15.1 15.1 20 20M7.8 10.5h5.4"/></svg>
+    </button>
+    <button class="control" id="pause" type="button" aria-label="Pause rotation" title="Pause rotation (Space)">
+      <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.4 7.2v9.6M14.6 7.2v9.6"/></svg>
+      <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.3 7.4v9.2L16.4 12 9.3 7.4Z"/></svg>
+    </button>
+    <button class="control" id="reset" type="button" aria-label="Reset view" title="Reset view">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.2 9.1A6.9 6.9 0 1 0 18.7 14"/><path d="M18.8 5.2v4.2h-4.2"/></svg>
+    </button>
+  </nav>
+
+  <div class="field-note" aria-hidden="true">
+    <span>RA 23h 44m 32s</span>
+    <span>DEC +26° 12′ 14″</span>
+    <span class="quiet">Exposure ∞</span>
+  </div>
+</div>
+
+<p class="sr-only" id="stageInstructions">Drag or use the arrow keys to rotate the view; up and down arrows change the tilt. Use the mouse wheel or a two-finger pinch to zoom. Press Space to pause or resume rotation, and R to reset the view.</p>
+<p class="sr-only" id="announcer" aria-live="polite"></p>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ------------------------------------------------------------------
+     Constants and state
+     ------------------------------------------------------------------ */
+  const TAU = Math.PI * 2;
+  const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let currentReducedMotion = reduceMotionQuery.matches;
+  let autoPausedForMotion = currentReducedMotion;
+
+  const FULL_PARTICLE_COUNT = 42000;
+  const REDUCED_PARTICLE_COUNT = 14000;
+  let particleCount = currentReducedMotion ? REDUCED_PARTICLE_COUNT : FULL_PARTICLE_COUNT;
+  const BULGE_RATIO = 0.18;
+  let bulgeCount = Math.round(particleCount * BULGE_RATIO);
+  let armCount = particleCount - bulgeCount;
+  let hotTotal = 0;
+  const HOT_RATIO = 0.06;
+
+  const SPIRAL_A = 0.07;
+  const SPIRAL_B = 0.28;
+  const DISK_THICKNESS = 0.06;
+
+  const DEFAULT_YAW = 0.58;
+  const DEFAULT_TILT = 1.05;        // 60.2° — the instrument's oblique rest view
+  const DEFAULT_ZOOM = 1;
+  const TILT_MIN = 0.10;
+  const TILT_MAX = 1.47;
+  const ZOOM_MIN = 0.35;
+  const ZOOM_MAX = 6;
+  const MAX_DPR = 2;
+
+  const DISTANCE_MLY = 24.8;
+  const DIAMETER_KLY = 62.4;
+
+  const stage = document.getElementById('stage');
+  const ctx = stage.getContext('2d', { alpha: false, desynchronized: true });
+  const pauseBtn = document.getElementById('pause');
+  const zoomInBtn = document.getElementById('zoomIn');
+  const zoomOutBtn = document.getElementById('zoomOut');
+  const resetBtn = document.getElementById('reset');
+  const announcer = document.getElementById('announcer');
+  const statParticles = document.getElementById('statParticles');
+  const statDistance = document.getElementById('statDistance');
+  const statDiameter = document.getElementById('statDiameter');
+  const statTilt = document.getElementById('statTilt');
+  const statZoom = document.getElementById('statZoom');
+  const compassNeedle = document.getElementById('compassNeedle');
+  const compassHeading = document.getElementById('compassHeading');
+
+  const view = {
+    W: 0,
+    H: 0,
+    dpr: 1,
+    cx: 0,
+    cy: 0,
+    baseRadius: 0,
+    yaw: DEFAULT_YAW,
+    tilt: DEFAULT_TILT,
+    zoom: DEFAULT_ZOOM,
+    targetZoom: DEFAULT_ZOOM,
+    spin: 0,
+    paused: currentReducedMotion,
+    resetTween: null,
+    statsStarted: 0,
+    statsSettled: false,
+    lastTiltText: '',
+    lastZoomText: '',
+    lastYawDegrees: null,
+    lastHeadingText: '',
+    drag: null,
+    pinch: null,
+    pointers: new Map(),
+    lastFrameDuration: 16.7,
+    needsDraw: true
+  };
+
+  /* ------------------------------------------------------------------
+     Small deterministic utilities
+     ------------------------------------------------------------------ */
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function random() {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function createGaussian(random) {
+    let spare = null;
+    return function gaussian() {
+      if (spare !== null) {
+        const value = spare;
+        spare = null;
+        return value;
+      }
+      let u = 0;
+      let v = 0;
+      while (u === 0) u = random();
+      v = random();
+      const magnitude = Math.sqrt(-2 * Math.log(u));
+      spare = magnitude * Math.sin(TAU * v);
+      return magnitude * Math.cos(TAU * v);
+    };
+  }
+
+  const clamp = (value, low, high) => value < low ? low : value > high ? high : value;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const smoothstep = (a, b, value) => {
+    const t = clamp((value - a) / (b - a), 0, 1);
+    return t * t * (3 - 2 * t);
+  };
+  const easeOutQuartic = t => 1 - Math.pow(1 - t, 4);
+  const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+
+  function hexToRgb(hex) {
+    const clean = hex.replace('#', '');
+    return [
+      parseInt(clean.slice(0, 2), 16),
+      parseInt(clean.slice(2, 4), 16),
+      parseInt(clean.slice(4, 6), 16)
+    ];
+  }
+
+  function mixRgb(a, b, t) {
+    const amount = clamp(t, 0, 1);
+    return [
+      Math.round(lerp(a[0], b[0], amount)),
+      Math.round(lerp(a[1], b[1], amount)),
+      Math.round(lerp(a[2], b[2], amount))
+    ];
+  }
+
+  function rgbaString(rgb, alpha) {
+    return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + alpha + ')';
+  }
+
+  const CORE_START = hexToRgb('#FFEBBE');
+  const CORE_END = hexToRgb('#FFCD82');
+  const ARM_START = hexToRgb('#CDD7FF');
+  const ARM_END = hexToRgb('#91C3FF');
+  const EDGE_START = hexToRgb('#AA7882');
+  const EDGE_END = hexToRgb('#D25058');
+  const HOT_A = hexToRgb('#9FC9FF');
+  const HOT_B = hexToRgb('#6FB2FF');
+
+  function coreColor(t) {
+    return mixRgb(CORE_START, CORE_END, clamp(t, 0, 1));
+  }
+
+  function armColor(radius) {
+    if (radius < 0.15) return coreColor(radius / 0.15);
+    if (radius < 0.31) return mixRgb(CORE_END, ARM_START, smoothstep(0.15, 0.31, radius));
+    if (radius < 0.73) return mixRgb(ARM_START, ARM_END, (radius - 0.31) / 0.42);
+    if (radius < 0.87) return mixRgb(ARM_END, EDGE_START, (radius - 0.73) / 0.14);
+    return mixRgb(EDGE_START, EDGE_END, (radius - 0.87) / 0.13);
+  }
+
+  /* ------------------------------------------------------------------
+     Starfield and distant galaxies, baked once into an offscreen canvas
+     ------------------------------------------------------------------ */
+  const backdrop = document.createElement('canvas');
+  const backdropCtx = backdrop.getContext('2d');
+
+  const DISTANT_GALAXY_TINTS = [
+    { core: [244, 231, 207], body: [164, 143, 121], halo: [70, 58, 48] },
+    { core: [222, 234, 255], body: [121, 145, 181], halo: [47, 61, 88] },
+    { core: [241, 214, 221], body: [162, 116, 130], halo: [63, 43, 51] },
+    { core: [231, 239, 255], body: [132, 151, 186], halo: [48, 61, 84] },
+    { core: [250, 232, 204], body: [177, 151, 119], halo: [72, 58, 43] }
+  ];
+
+  function paintDistantGalaxy(g, x, y, size, aspect, angle, tint) {
+    g.save();
+    g.translate(x, y);
+    g.rotate(angle);
+    g.scale(1, aspect);
+    g.globalCompositeOperation = 'lighter';
+
+    const halo = g.createRadialGradient(0, 0, 0, 0, 0, size * 1.7);
+    halo.addColorStop(0, rgbaString(tint.body, 0.043));
+    halo.addColorStop(0.44, rgbaString(tint.halo, 0.019));
+    halo.addColorStop(1, rgbaString(tint.halo, 0));
+    g.fillStyle = halo;
+    g.beginPath();
+    g.arc(0, 0, size * 1.7, 0, TAU);
+    g.fill();
+
+    const body = g.createRadialGradient(0, 0, 0, 0, 0, size);
+    body.addColorStop(0, rgbaString(tint.core, 0.235));
+    body.addColorStop(0.08, rgbaString(tint.core, 0.145));
+    body.addColorStop(0.28, rgbaString(tint.body, 0.080));
+    body.addColorStop(0.62, rgbaString(tint.halo, 0.024));
+    body.addColorStop(1, rgbaString(tint.halo, 0));
+    g.fillStyle = body;
+    g.beginPath();
+    g.arc(0, 0, size, 0, TAU);
+    g.fill();
+
+    g.restore();
+  }
+
+  function paintBackdrop() {
+    const W = view.W;
+    const H = view.H;
+    const d = view.dpr;
+    const pixelWidth = Math.max(1, Math.round(W * d));
+    const pixelHeight = Math.max(1, Math.round(H * d));
+
+    if (backdrop.width !== pixelWidth || backdrop.height !== pixelHeight) {
+      backdrop.width = pixelWidth;
+      backdrop.height = pixelHeight;
+    }
+
+    const g = backdropCtx;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+    g.fillStyle = '#000000';
+    g.fillRect(0, 0, pixelWidth, pixelHeight);
+    g.setTransform(d, 0, 0, d, 0, 0);
+
+    const random = mulberry32(0x7741A17);
+    const minDim = Math.min(W, H);
+
+    // Twelve remote galaxies, deliberately sparing and almost lost in the field.
+    for (let i = 0; i < 12; i++) {
+      let nx = 0;
+      let ny = 0;
+      let guard = 0;
+      do {
+        nx = 0.055 + random() * 0.89;
+        ny = 0.055 + random() * 0.89;
+        guard++;
+      } while (Math.hypot((nx - 0.5) * 1.1, ny - 0.5) < 0.29 && guard < 32);
+
+      const size = (0.026 + random() * 0.058) * Math.max(minDim, 620);
+      const aspect = 0.24 + random() * 0.43;
+      const angle = random() * Math.PI;
+      const tint = DISTANT_GALAXY_TINTS[i % DISTANT_GALAXY_TINTS.length];
+      paintDistantGalaxy(g, nx * W, ny * H, size, aspect, angle, tint);
+    }
+
+    // A faint, uneven scattering of field stars. Density follows viewport area.
+    const starCount = clamp(Math.round((W * H) / 3700), 120, 900);
+    g.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < starCount; i++) {
+      const x = random() * W;
+      const y = random() * H;
+      const radius = 0.30 + Math.pow(random(), 2.7) * 1.15;
+      const alpha = 0.055 + random() * 0.35;
+      const warm = random() < 0.19;
+      g.fillStyle = warm
+        ? 'rgba(255,238,211,' + alpha.toFixed(3) + ')'
+        : 'rgba(208,224,255,' + alpha.toFixed(3) + ')';
+      g.beginPath();
+      g.arc(x, y, radius, 0, TAU);
+      g.fill();
+    }
+
+    // A handful of marginally brighter field stars, kept soft and peripheral.
+    for (let i = 0; i < 7; i++) {
+      const x = random() * W;
+      const y = random() * H;
+      const radius = 1.1 + random() * 1.4;
+      const glow = g.createRadialGradient(x, y, 0, x, y, radius * 5.5);
+      glow.addColorStop(0, 'rgba(226,236,255,.30)');
+      glow.addColorStop(0.24, 'rgba(196,214,250,.09)');
+      glow.addColorStop(1, 'rgba(180,198,235,0)');
+      g.fillStyle = glow;
+      g.beginPath();
+      g.arc(x, y, radius * 5.5, 0, TAU);
+      g.fill();
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     Pre-rendered particle sprites, cached per quantized tint
+     ------------------------------------------------------------------ */
+  const spriteCache = new Map();
+
+  function makeStarSprite(r, g, b) {
+    const sprite = document.createElement('canvas');
+    sprite.width = 32;
+    sprite.height = 32;
+    const s = sprite.getContext('2d');
+    const gradient = s.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gradient.addColorStop(0.00, 'rgba(' + r + ',' + g + ',' + b + ',1)');
+    gradient.addColorStop(0.07, 'rgba(' + r + ',' + g + ',' + b + ',.95)');
+    gradient.addColorStop(0.19, 'rgba(' + r + ',' + g + ',' + b + ',.48)');
+    gradient.addColorStop(0.42, 'rgba(' + r + ',' + g + ',' + b + ',.115)');
+    gradient.addColorStop(0.72, 'rgba(' + r + ',' + g + ',' + b + ',.022)');
+    gradient.addColorStop(1.00, 'rgba(' + r + ',' + g + ',' + b + ',0)');
+    s.fillStyle = gradient;
+    s.fillRect(0, 0, 32, 32);
+    return sprite;
+  }
+
+  const palette = [];
+  const paletteByKey = new Map();
+  const paletteSprites = [];
+
+  function paletteIndexFor(rgb) {
+    const qr = clamp(Math.round(rgb[0] / 8) * 8, 0, 255);
+    const qg = clamp(Math.round(rgb[1] / 8) * 8, 0, 255);
+    const qb = clamp(Math.round(rgb[2] / 8) * 8, 0, 255);
+    const key = ((qr >> 3) << 10) | ((qg >> 3) << 5) | (qb >> 3);
+
+    let index = paletteByKey.get(key);
+    if (index !== undefined) return index;
+
+    let sprite = spriteCache.get(key);
+    if (!sprite) {
+      sprite = makeStarSprite(qr, qg, qb);
+      spriteCache.set(key, sprite);
+    }
+
+    index = palette.length;
+    palette.push({ key, r: qr, g: qg, b: qb, sprite });
+    paletteSprites.push(sprite);
+    paletteByKey.set(key, index);
+    return index;
+  }
+
+  /* ------------------------------------------------------------------
+     The galaxy: 18% Gaussian bulge, 82% logarithmic spiral arms
+     ------------------------------------------------------------------ */
+  let radii;
+  let baseAngles;
+  let heights;
+  let sizes;
+  let brightness;
+  let omegas;
+  let paletteIndices;
+  let hotFlags;
+
+  function buildGalaxy() {
+    bulgeCount = Math.round(particleCount * BULGE_RATIO);
+    armCount = particleCount - bulgeCount;
+    radii = new Float32Array(particleCount);
+    baseAngles = new Float32Array(particleCount);
+    heights = new Float32Array(particleCount);
+    sizes = new Float32Array(particleCount);
+    brightness = new Float32Array(particleCount);
+    omegas = new Float32Array(particleCount);
+    paletteIndices = new Uint16Array(particleCount);
+    hotFlags = new Uint8Array(particleCount);
+    hotTotal = 0;
+
+    const random = mulberry32(0x0B5E55ED);
+    const gaussian = createGaussian(random);
+
+    let cursor = 0;
+
+    // The spherical bulge. Gaussian in x, y, z; truncated at just over four sigma.
+    for (let i = 0; i < bulgeCount; i++) {
+      let gx = 0;
+      let gy = 0;
+      let gz = 0;
+      let length = 0;
+      let guard = 0;
+      do {
+        gx = gaussian();
+        gy = gaussian();
+        gz = gaussian();
+        length = Math.sqrt(gx * gx + gy * gy + gz * gz);
+        guard++;
+      } while (length > 4.15 && guard < 10);
+
+      const sigma = 0.108;
+      const x = gx * sigma;
+      const y = gy * sigma;
+      const z = gz * sigma;
+      const radius = Math.hypot(x, y);
+      const colorT = clamp(radius / 0.38, 0, 1);
+
+      radii[cursor] = radius;
+      baseAngles[cursor] = Math.atan2(y, x);
+      heights[cursor] = z;
+      sizes[cursor] = 1.5 + Math.pow(random(), 1.45) * 3.9;
+      brightness[cursor] = 0.50 + random() * 0.46;
+      omegas[cursor] = 0.35 / (0.25 + radius);
+      paletteIndices[cursor] = paletteIndexFor(coreColor(0.04 + colorT * 0.96));
+      hotFlags[cursor] = 0;
+      cursor++;
+    }
+
+    // The disk. Radius is exponentially distributed (mean 0.32) and the two
+    // arms follow r = a * e^(b * theta). Scatter widens with radius.
+    for (let i = 0; i < armCount; i++) {
+      let radius = 0;
+      let guard = 0;
+      do {
+        radius = -0.32 * Math.log(1 - random());
+        guard++;
+      } while (radius > 1 && guard < 20);
+      radius = clamp(radius, 0.012 + random() * 0.018, 0.996);
+
+      const arm = i % 2;
+      const spiralTheta = Math.log(radius / SPIRAL_A) / SPIRAL_B;
+      const armTheta = spiralTheta + arm * Math.PI;
+      const angularScatter = 0.022 + 0.58 * Math.pow(radius, 1.35);
+      const angle = armTheta + gaussian() * angularScatter;
+
+      const height = gaussian() * DISK_THICKNESS * Math.max(radius, 0.02);
+      const isHot = random() < HOT_RATIO;
+      const edgeDim = 1 - 0.38 * Math.pow(radius, 1.6);
+
+      radii[cursor] = radius;
+      baseAngles[cursor] = angle;
+      heights[cursor] = height;
+      hotFlags[cursor] = isHot ? 1 : 0;
+
+      if (isHot) {
+        hotTotal++;
+        sizes[cursor] = 5.2 + random() * 7.0;
+        brightness[cursor] = 1;
+        paletteIndices[cursor] = paletteIndexFor(mixRgb(HOT_A, HOT_B, random()));
+      } else {
+        sizes[cursor] = 1.3 + Math.pow(random(), 1.5) * 4.4;
+        brightness[cursor] = (0.30 + random() * 0.62) * edgeDim;
+        paletteIndices[cursor] = paletteIndexFor(armColor(radius));
+      }
+
+      omegas[cursor] = 0.35 / (0.25 + radius);
+      cursor++;
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     Nebula dust sprites and the dust layer that follows the arms
+     ------------------------------------------------------------------ */
+  const nebulaSpriteCache = new Map();
+  const nebulaBlobs = [];
+
+  function makeNebulaSprite(rgb) {
+    const qr = clamp(Math.round(rgb[0] / 16) * 16, 0, 255);
+    const qg = clamp(Math.round(rgb[1] / 16) * 16, 0, 255);
+    const qb = clamp(Math.round(rgb[2] / 16) * 16, 0, 255);
+    const key = qr + ',' + qg + ',' + qb;
+    let sprite = nebulaSpriteCache.get(key);
+    if (sprite) return sprite;
+
+    sprite = document.createElement('canvas');
+    sprite.width = 192;
+    sprite.height = 192;
+    const s = sprite.getContext('2d');
+    const gradient = s.createRadialGradient(96, 96, 0, 96, 96, 96);
+    gradient.addColorStop(0.00, 'rgba(' + qr + ',' + qg + ',' + qb + ',1)');
+    gradient.addColorStop(0.13, 'rgba(' + qr + ',' + qg + ',' + qb + ',.68)');
+    gradient.addColorStop(0.36, 'rgba(' + qr + ',' + qg + ',' + qb + ',.24)');
+    gradient.addColorStop(0.66, 'rgba(' + qr + ',' + qg + ',' + qb + ',.060)');
+    gradient.addColorStop(1.00, 'rgba(' + qr + ',' + qg + ',' + qb + ',0)');
+    s.fillStyle = gradient;
+    s.fillRect(0, 0, 192, 192);
+    nebulaSpriteCache.set(key, sprite);
+    return sprite;
+  }
+
+  function buildNebula() {
+    const random = mulberry32(0xBEE5D057);
+    const gaussian = createGaussian(random);
+    const warmA = hexToRgb('#FFB777');
+    const warmB = hexToRgb('#FFD2A0');
+    const cobaltA = hexToRgb('#6C8FFF');
+    const cobaltB = hexToRgb('#4B70DA');
+    const wineA = hexToRgb('#942F50');
+    const wineB = hexToRgb('#BC4660');
+
+    for (let i = 0; i < 90; i++) {
+      let radius = 0;
+      let guard = 0;
+      do {
+        radius = -0.36 * Math.log(1 - random());
+        guard++;
+      } while (radius > 1 && guard < 18);
+      radius = clamp(radius, 0.05, 0.985);
+
+      const arm = i % 2;
+      const spiralTheta = Math.log(radius / SPIRAL_A) / SPIRAL_B;
+      const angle = spiralTheta + arm * Math.PI + gaussian() * (0.09 + radius * 0.23);
+
+      let tint;
+      if (radius < 0.30) {
+        tint = mixRgb(warmA, warmB, random());
+      } else if (radius < 0.66) {
+        tint = mixRgb(cobaltA, cobaltB, random());
+      } else {
+        tint = mixRgb(wineA, wineB, random());
+      }
+
+      nebulaBlobs.push({
+        radius,
+        baseAngle: angle,
+        height: (random() - 0.5) * 0.045 * radius,
+        omega: 0.35 / (0.25 + radius),
+        width: 0.22 + random() * 0.48,
+        aspect: 0.33 + random() * 0.40,
+        rotation: (random() - 0.5) * 0.9,
+        alpha: 0.06 + random() * 0.03,
+        sprite: makeNebulaSprite(tint)
+      });
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     Layout and the rendered frame
+     ------------------------------------------------------------------ */
+  function resizeCanvas() {
+    view.W = Math.max(1, window.innerWidth);
+    view.H = Math.max(1, window.innerHeight);
+    view.dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+
+    const pixelWidth = Math.round(view.W * view.dpr);
+    const pixelHeight = Math.round(view.H * view.dpr);
+    if (stage.width !== pixelWidth || stage.height !== pixelHeight) {
+      stage.width = pixelWidth;
+      stage.height = pixelHeight;
+    }
+    stage.style.width = view.W + 'px';
+    stage.style.height = view.H + 'px';
+
+    ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+
+    const portraitish = view.W <= 820;
+    view.cx = view.W * (portraitish ? 0.50 : 0.515);
+    view.cy = view.H * (portraitish ? 0.455 : 0.492);
+    view.baseRadius = Math.min(view.W * 0.485, view.H * 0.47);
+
+    paintBackdrop();
+    view.needsDraw = true;
+  }
+
+  function drawCoreGlow(cx, cy, radius) {
+    const broad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 0.50);
+    broad.addColorStop(0.00, 'rgba(255,242,215,.205)');
+    broad.addColorStop(0.07, 'rgba(255,222,168,.155)');
+    broad.addColorStop(0.22, 'rgba(255,194,123,.072)');
+    broad.addColorStop(0.48, 'rgba(225,139,76,.021)');
+    broad.addColorStop(0.76, 'rgba(118,64,39,.005)');
+    broad.addColorStop(1.00, 'rgba(0,0,0,0)');
+    ctx.fillStyle = broad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 0.50, 0, TAU);
+    ctx.fill();
+
+    const tight = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 0.115);
+    tight.addColorStop(0.00, 'rgba(255,247,228,.30)');
+    tight.addColorStop(0.30, 'rgba(255,220,168,.105)');
+    tight.addColorStop(0.70, 'rgba(255,190,118,.018)');
+    tight.addColorStop(1.00, 'rgba(0,0,0,0)');
+    ctx.fillStyle = tight;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 0.115, 0, TAU);
+    ctx.fill();
+  }
+
+  function drawNebula(cx, cy, radius, spinTime) {
+    const cosYaw = Math.cos(view.yaw);
+    const sinYaw = Math.sin(view.yaw);
+    const cosTilt = Math.cos(view.tilt);
+    const sinTilt = Math.sin(view.tilt);
+    const squash = 0.39 + 0.61 * Math.abs(cosTilt);
+
+    for (let i = 0; i < nebulaBlobs.length; i++) {
+      const blob = nebulaBlobs[i];
+      const angle = blob.baseAngle + blob.omega * spinTime;
+      const lx = Math.cos(angle) * blob.radius;
+      const ly = Math.sin(angle) * blob.radius;
+      const x = lx * cosYaw - ly * sinYaw;
+      const y = lx * sinYaw + ly * cosYaw;
+      const screenY = y * cosTilt + blob.height * sinTilt;
+      const depth = -y * sinTilt + blob.height * cosTilt;
+
+      const px = cx + x * radius;
+      const py = cy + screenY * radius;
+      const width = blob.width * radius * (0.96 + depth * 0.05);
+      if (width < 2) continue;
+
+      const tangent = angle + Math.atan2(1, SPIRAL_B) + view.yaw + blob.rotation;
+      const screenAngle = Math.atan2(Math.sin(tangent) * cosTilt, Math.cos(tangent));
+      const height = width * blob.aspect * squash;
+
+      ctx.save();
+      ctx.globalAlpha = blob.alpha;
+      ctx.translate(px, py);
+      ctx.rotate(screenAngle);
+      ctx.drawImage(blob.sprite, -width * 0.5, -height * 0.5, width, height);
+      ctx.restore();
+    }
+  }
+
+  function drawParticles(cx, cy, radius) {
+    const cosYaw = Math.cos(view.yaw);
+    const sinYaw = Math.sin(view.yaw);
+    const cosTilt = Math.cos(view.tilt);
+    const sinTilt = Math.sin(view.tilt);
+    const sizeZoom = 0.82 + 0.18 * Math.sqrt(view.zoom);
+    const spinTime = view.spin;
+    const W = view.W;
+    const H = view.H;
+
+    for (let i = 0; i < particleCount; i++) {
+      const r = radii[i];
+      const theta = baseAngles[i] + omegas[i] * spinTime;
+      const cosTheta = Math.cos(theta);
+      const sinTheta = Math.sin(theta);
+      const lx = cosTheta * r;
+      const ly = sinTheta * r;
+
+      const x = lx * cosYaw - ly * sinYaw;
+      const y = lx * sinYaw + ly * cosYaw;
+      const depth = -y * sinTilt + heights[i] * cosTilt;
+      const screenY = y * cosTilt + heights[i] * sinTilt;
+
+      const drawSize = sizes[i] * (1 + depth * 0.20) * sizeZoom;
+      const px = cx + x * radius;
+      const py = cy + screenY * radius;
+      if (px < -drawSize || px > W + drawSize || py < -drawSize || py > H + drawSize) continue;
+
+      const alpha = brightness[i];
+      ctx.globalAlpha = alpha > 1 ? 1 : alpha;
+      const sprite = paletteSprites[paletteIndices[i]];
+      const half = drawSize * 0.5;
+      ctx.drawImage(sprite, px - half, py - half, drawSize, drawSize);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFrame() {
+    const W = view.W;
+    const H = view.H;
+    const dpr = view.dpr;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(backdrop, 0, 0, W, H);
+
+    const radius = view.baseRadius * view.zoom;
+    const cx = view.cx;
+    const cy = view.cy;
+
+    ctx.globalCompositeOperation = 'lighter';
+    drawCoreGlow(cx, cy, radius);
+    drawNebula(cx, cy, radius, view.spin);
+    drawParticles(cx, cy, radius);
+
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
+
+  /* ------------------------------------------------------------------
+     Telemetry
+     ------------------------------------------------------------------ */
+  const numberFormatter = new Intl.NumberFormat('en-US');
+
+  function settleTelemetry() {
+    statParticles.textContent = numberFormatter.format(particleCount);
+    statDistance.textContent = DISTANCE_MLY.toFixed(1);
+    statDiameter.textContent = DIAMETER_KLY.toFixed(1);
+    view.statsSettled = true;
+  }
+
+  function restartTelemetryCount() {
+    view.statsSettled = false;
+    view.statsStarted = 0;
+    statParticles.textContent = '0';
+    statDistance.textContent = '0.0';
+    statDiameter.textContent = '0.0';
+  }
+
+  function applyMotionPreference(reduced) {
+    if (reduced === currentReducedMotion) return;
+    currentReducedMotion = reduced;
+    particleCount = reduced ? REDUCED_PARTICLE_COUNT : FULL_PARTICLE_COUNT;
+    buildGalaxy();
+    restartTelemetryCount();
+    view.needsDraw = true;
+
+    if (reduced) {
+      if (!view.paused) {
+        autoPausedForMotion = true;
+        setPaused(true, true, true);
+      }
+    } else if (autoPausedForMotion) {
+      autoPausedForMotion = false;
+      setPaused(false, true, true);
+    }
+
+    announcer.textContent = reduced
+      ? 'Reduced motion enabled. The field now shows 14,000 particles; rotation is paused.'
+      : 'Full field restored. The instrument now shows 42,000 particles.';
+  }
+
+  function updateTelemetry(now) {
+    if (!view.statsSettled) {
+      if (!view.statsStarted) view.statsStarted = now;
+      const t = clamp((now - view.statsStarted) / 3200, 0, 1);
+      const eased = easeOutQuartic(t);
+      statParticles.textContent = numberFormatter.format(Math.round(particleCount * eased));
+      statDistance.textContent = (DISTANCE_MLY * eased).toFixed(1);
+      statDiameter.textContent = (DIAMETER_KLY * eased).toFixed(1);
+      if (t >= 1) settleTelemetry();
+    }
+
+    const tiltText = (view.tilt * 180 / Math.PI).toFixed(1);
+    if (tiltText !== view.lastTiltText) {
+      statTilt.textContent = tiltText;
+      view.lastTiltText = tiltText;
+    }
+
+    const zoomText = view.zoom.toFixed(2);
+    if (zoomText !== view.lastZoomText) {
+      statZoom.textContent = zoomText;
+      view.lastZoomText = zoomText;
+    }
+
+    const degrees = ((view.yaw * 180 / Math.PI) % 360 + 360) % 360;
+    if (degrees !== view.lastYawDegrees) {
+      view.lastYawDegrees = degrees;
+      compassNeedle.style.transform = 'rotate(' + degrees.toFixed(2) + 'deg)';
+      const headingText = String(Math.round(degrees) % 360).padStart(3, '0') + '°';
+      if (headingText !== view.lastHeadingText) {
+        compassHeading.textContent = headingText;
+        view.lastHeadingText = headingText;
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     View controls and pointer interaction
+     ------------------------------------------------------------------ */
+  function setPaused(paused, announce, automatic) {
+    view.paused = paused;
+    if (!automatic) autoPausedForMotion = false;
+    pauseBtn.classList.toggle('is-paused', paused);
+    const label = paused ? 'Resume rotation' : 'Pause rotation';
+    pauseBtn.setAttribute('aria-label', label);
+    pauseBtn.title = label + ' (Space)';
+    if (announce) announcer.textContent = paused ? 'Rotation paused.' : 'Rotation resumed.';
+  }
+
+  function cancelResetTween() {
+    if (!view.resetTween) return;
+    view.resetTween = null;
+    view.targetZoom = view.zoom;
+  }
+
+  function nudgeZoom(factor) {
+    cancelResetTween();
+    view.targetZoom = clamp(view.targetZoom * factor, ZOOM_MIN, ZOOM_MAX);
+    view.needsDraw = true;
+  }
+
+  function resetView() {
+    const now = performance.now();
+    view.resetTween = null;
+    const fromYaw = view.yaw;
+    const toYaw = DEFAULT_YAW + Math.round((fromYaw - DEFAULT_YAW) / TAU) * TAU;
+
+    if (currentReducedMotion) {
+      view.yaw = DEFAULT_YAW;
+      view.tilt = DEFAULT_TILT;
+      view.zoom = DEFAULT_ZOOM;
+      view.targetZoom = DEFAULT_ZOOM;
+    } else {
+      view.resetTween = {
+        started: now,
+        duration: 1150,
+        fromYaw,
+        fromTilt: view.tilt,
+        fromZoom: view.zoom,
+        toYaw,
+        toTilt: DEFAULT_TILT,
+        toZoom: DEFAULT_ZOOM
+      };
+      view.targetZoom = DEFAULT_ZOOM;
+    }
+    view.needsDraw = true;
+    announcer.textContent = 'View reset to the default oblique aspect.';
+  }
+
+  function startDrag(pointerId) {
+    const pointer = view.pointers.get(pointerId);
+    if (!pointer) return;
+    view.drag = {
+      id: pointerId,
+      startX: pointer.x,
+      startY: pointer.y,
+      startYaw: view.yaw,
+      startTilt: view.tilt
+    };
+    view.pinch = null;
+  }
+
+  function startPinch() {
+    const ids = Array.from(view.pointers.keys());
+    if (ids.length < 2) {
+      view.pinch = null;
+      return;
+    }
+    const first = view.pointers.get(ids[0]);
+    const second = view.pointers.get(ids[1]);
+    view.drag = null;
+    view.pinch = {
+      ids: [ids[0], ids[1]],
+      distance: Math.max(1, Math.hypot(first.x - second.x, first.y - second.y)),
+      zoom: view.targetZoom
+    };
+  }
+
+  function onPointerDown(event) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (!event.isPrimary && view.pointers.size === 0) return;
+
+    cancelResetTween();
+    view.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    try {
+      stage.setPointerCapture(event.pointerId);
+    } catch (_) {
+      // Pointer capture is a convenience, not a prerequisite for the gesture.
+    }
+    stage.classList.add('is-dragging');
+
+    if (view.pointers.size === 1) {
+      startDrag(event.pointerId);
+    } else {
+      startPinch();
+    }
+  }
+
+  function onPointerMove(event) {
+    const pointer = view.pointers.get(event.pointerId);
+    if (!pointer) return;
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+
+    if (view.pointers.size >= 2 && view.pinch) {
+      const first = view.pointers.get(view.pinch.ids[0]);
+      const second = view.pointers.get(view.pinch.ids[1]);
+      if (!first || !second) {
+        startPinch();
+        return;
+      }
+      const distance = Math.hypot(first.x - second.x, first.y - second.y);
+      view.targetZoom = clamp(view.pinch.zoom * distance / view.pinch.distance, ZOOM_MIN, ZOOM_MAX);
+      view.needsDraw = true;
+      return;
+    }
+
+    if (view.drag && view.drag.id === event.pointerId) {
+      const dx = event.clientX - view.drag.startX;
+      const dy = event.clientY - view.drag.startY;
+      view.yaw = view.drag.startYaw + dx * 0.0062;
+      view.tilt = clamp(view.drag.startTilt + dy * 0.0044, TILT_MIN, TILT_MAX);
+      view.needsDraw = true;
+    }
+  }
+
+  function releasePointer(event) {
+    view.pointers.delete(event.pointerId);
+
+    if (view.pointers.size === 0) {
+      view.drag = null;
+      view.pinch = null;
+      stage.classList.remove('is-dragging');
+      return;
+    }
+
+    if (view.pointers.size === 1) {
+      const remainingId = view.pointers.keys().next().value;
+      view.pinch = null;
+      startDrag(remainingId);
+      return;
+    }
+
+    startPinch();
+  }
+
+  function clearPointers() {
+    if (view.pointers.size === 0) return;
+    view.pointers.clear();
+    view.drag = null;
+    view.pinch = null;
+    stage.classList.remove('is-dragging');
+  }
+
+  function onWheel(event) {
+    event.preventDefault();
+    cancelResetTween();
+    let delta = event.deltaY;
+    if (event.deltaMode === 1) delta *= 16;
+    else if (event.deltaMode === 2) delta *= 100;
+    const factor = Math.exp(-delta * 0.00135);
+    view.targetZoom = clamp(view.targetZoom * factor, ZOOM_MIN, ZOOM_MAX);
+    view.needsDraw = true;
+  }
+
+  function onKeyDown(event) {
+    if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' ||
+        event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      const target = event.target;
+      if (target && target.closest && target.closest('input, textarea, select')) return;
+      event.preventDefault();
+      const yawStep = event.shiftKey ? 0.18 : 0.065;
+      const tiltStep = event.shiftKey ? 0.09 : 0.032;
+      if (event.key === 'ArrowLeft') view.yaw -= yawStep;
+      else if (event.key === 'ArrowRight') view.yaw += yawStep;
+      else if (event.key === 'ArrowUp') view.tilt = clamp(view.tilt - tiltStep, TILT_MIN, TILT_MAX);
+      else view.tilt = clamp(view.tilt + tiltStep, TILT_MIN, TILT_MAX);
+      view.needsDraw = true;
+      return;
+    }
+
+    if (event.code === 'Space' || event.key === ' ') {
+      const target = event.target;
+      if (target && target.closest && target.closest('button, a, input, textarea, select')) return;
+      if (event.repeat) return;
+      event.preventDefault();
+      setPaused(!view.paused, true);
+      return;
+    }
+
+    if (event.key === '+' || event.key === '=') {
+      event.preventDefault();
+      nudgeZoom(1.30);
+    } else if (event.key === '-' || event.key === '_') {
+      event.preventDefault();
+      nudgeZoom(1 / 1.30);
+    } else if (event.key === 'r' || event.key === 'R') {
+      event.preventDefault();
+      resetView();
+    }
+  }
+
+  /* ------------------------------------------------------------------
+     Compass ring and boot
+     ------------------------------------------------------------------ */
+  function buildCompassTicks() {
+    const group = document.getElementById('compassTicks');
+    let markup = '';
+    for (let degrees = 0; degrees < 360; degrees += 5) {
+      const angle = (degrees - 90) * Math.PI / 180;
+      const major = degrees % 90 === 0;
+      const medium = degrees % 30 === 0;
+      const inner = major ? 26.0 : medium ? 27.1 : 28.2;
+      const outer = 29.5;
+      const width = major ? 0.8 : medium ? 0.55 : 0.35;
+      const opacity = major ? 0.42 : medium ? 0.25 : 0.12;
+      const x1 = 42 + Math.cos(angle) * inner;
+      const y1 = 42 + Math.sin(angle) * inner;
+      const x2 = 42 + Math.cos(angle) * outer;
+      const y2 = 42 + Math.sin(angle) * outer;
+      markup += '<line x1="' + x1.toFixed(2) + '" y1="' + y1.toFixed(2) +
+        '" x2="' + x2.toFixed(2) + '" y2="' + y2.toFixed(2) +
+        '" stroke="rgba(190,204,224,' + opacity + ')" stroke-width="' + width + '"/>';
+    }
+    group.innerHTML = markup;
+  }
+
+  function updateView(dt, now) {
+    if (view.resetTween) {
+      const tween = view.resetTween;
+      const t = clamp((now - tween.started) / tween.duration, 0, 1);
+      const eased = easeOutCubic(t);
+      view.yaw = lerp(tween.fromYaw, tween.toYaw, eased);
+      view.tilt = lerp(tween.fromTilt, tween.toTilt, eased);
+      view.zoom = lerp(tween.fromZoom, tween.toZoom, eased);
+      view.needsDraw = true;
+      if (t >= 1) {
+        view.resetTween = null;
+        view.yaw = DEFAULT_YAW;
+        view.tilt = DEFAULT_TILT;
+        view.zoom = DEFAULT_ZOOM;
+        view.targetZoom = DEFAULT_ZOOM;
+      }
+    } else {
+      const smoothing = 1 - Math.exp(-dt * 8.6);
+      view.zoom += (view.targetZoom - view.zoom) * smoothing;
+      if (Math.abs(view.targetZoom - view.zoom) < 0.0004) view.zoom = view.targetZoom;
+    }
+
+    if (!view.paused) view.spin += dt;
+    updateTelemetry(now);
+  }
+
+  let lastFrameTime = 0;
+  let readyScheduled = false;
+  let resizeQueued = false;
+
+  function queueResize() {
+    if (resizeQueued) return;
+    resizeQueued = true;
+    requestAnimationFrame(() => {
+      resizeQueued = false;
+      resizeCanvas();
+    });
+  }
+
+  function animate(now) {
+    const dt = lastFrameTime ? Math.min((now - lastFrameTime) / 1000, 0.05) : 1 / 60;
+    lastFrameTime = now;
+    view.lastFrameDuration = lerp(view.lastFrameDuration, dt * 1000, 0.04);
+
+    updateView(dt, now);
+    const zoomSettling = Math.abs(view.targetZoom - view.zoom) > 0.0004;
+    if (!view.paused || view.resetTween || zoomSettling || view.needsDraw) {
+      drawFrame();
+      view.needsDraw = false;
+    }
+
+    if (!readyScheduled) {
+      readyScheduled = true;
+      requestAnimationFrame(() => document.body.classList.add('is-ready'));
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  function init() {
+    buildCompassTicks();
+    buildGalaxy();
+    buildNebula();
+    resizeCanvas();
+    updatePauseButtonInitial();
+
+    window.addEventListener('resize', queueResize, { passive: true });
+    stage.addEventListener('pointerdown', onPointerDown);
+    stage.addEventListener('pointermove', onPointerMove);
+    stage.addEventListener('pointerup', releasePointer);
+    stage.addEventListener('pointercancel', releasePointer);
+    stage.addEventListener('lostpointercapture', releasePointer);
+    window.addEventListener('blur', clearPointers);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) clearPointers();
+    });
+    window.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('keydown', onKeyDown);
+
+    const onMotionPreferenceChange = event => applyMotionPreference(event.matches);
+    if (typeof reduceMotionQuery.addEventListener === 'function') {
+      reduceMotionQuery.addEventListener('change', onMotionPreferenceChange);
+    } else if (typeof reduceMotionQuery.addListener === 'function') {
+      reduceMotionQuery.addListener(onMotionPreferenceChange);
+    }
+
+    pauseBtn.addEventListener('click', () => setPaused(!view.paused, true));
+    zoomInBtn.addEventListener('click', () => nudgeZoom(1.30));
+    zoomOutBtn.addEventListener('click', () => nudgeZoom(1 / 1.30));
+    resetBtn.addEventListener('click', resetView);
+
+    // A record for inspection, without exposing any controls in the UI.
+    window.__GALAXY__ = {
+      get particleCount() { return particleCount; },
+      get bulgeCount() { return bulgeCount; },
+      get armCount() { return armCount; },
+      get hotCount() { return hotTotal; },
+      get spriteCacheSize() { return spriteCache.size; },
+      get paletteSize() { return palette.length; },
+      nebulaCount: nebulaBlobs.length,
+      get reducedMotion() { return currentReducedMotion; },
+      get view() {
+        return {
+          yaw: view.yaw,
+          tilt: view.tilt,
+          zoom: view.zoom,
+          targetZoom: view.targetZoom,
+          spin: view.spin,
+          paused: view.paused,
+          dpr: view.dpr,
+          width: view.W,
+          height: view.H,
+          canvasWidth: stage.width,
+          canvasHeight: stage.height,
+          averageFrameMs: view.lastFrameDuration
+        };
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }
+
+  function updatePauseButtonInitial() {
+    setPaused(view.paused, false, true);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
